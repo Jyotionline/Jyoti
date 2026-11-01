@@ -79,16 +79,64 @@ async function loadAdminBanners(){const root=$("admin-banner-list");if(!root)ret
 async function loadAdminOrders(){const root=$("admin-order-list");if(!root)return;const snap=await getDocs(collection(db,"orders"));root.innerHTML=snap.empty?"<p>No orders yet.</p>":`<div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Payment</th><th>Status</th><th>Update</th></tr></thead><tbody>${snap.docs.map(d=>{const o=d.data();return `<tr><td>${d.id.slice(0,8)}</td><td>${esc(o.address?.name||"Customer")}<br>${esc(o.address?.phone||"")}</td><td>${money(o.total)}</td><td>${esc(o.paymentStatus||"pending")}</td><td>${esc(o.status||"new")}</td><td><select data-order-status="${d.id}"><option>new</option><option>processing</option><option>shipped</option><option>delivered</option><option>cancelled</option></select></td></tr>`}).join("")}</tbody></table></div>`;root.querySelectorAll("[data-order-status]").forEach(s=>s.onchange=async()=>{await updateDoc(doc(db,"orders",s.dataset.orderStatus),{status:s.value,updatedAt:serverTimestamp()})})}
 async function loadAdminReviews(){const root=$("admin-review-list");if(!root)return;const snap=await getDocs(collection(db,"reviews"));root.innerHTML=snap.empty?"<p>No reviews yet.</p>":snap.docs.map(d=>`<div class="admin-list-row"><span>${esc(d.data().text||"")} · ${d.data().rating||5}★</span><button class="small-button" data-approve-review="${d.id}">${d.data().approved?"Approved":"Approve"}</button><button class="small-button danger" data-delete-review="${d.id}">Delete</button></div>`).join("");root.querySelectorAll("[data-approve-review]").forEach(b=>b.onclick=async()=>{await updateDoc(doc(db,"reviews",b.dataset.approveReview),{approved:true});await loadAdminReviews()});root.querySelectorAll("[data-delete-review]").forEach(b=>b.onclick=async()=>{await deleteDoc(doc(db,"reviews",b.dataset.deleteReview));await loadAdminReviews()})}
 async function loadSettings(){if(!$("setting-store-name"))return;const snap=await getDoc(doc(db,"settings","store"));if(snap.exists()){const s=snap.data();$("setting-store-name").value=s.storeName||"Jyoti Store";$("setting-email").value=s.email||"";$("setting-phone").value=s.phone||"";$("setting-about").value=s.about||"";$("setting-contact").value=s.contact||""}else $("setting-store-name").value="Jyoti Store"}
-
-function wireAdmin(){ 
   
-      $("admin-login-form")?.addEventListener("submit", async e => {
-  e.preventDefault();
+      function wireAdmin(){ 
+  const loginForm = $("admin-login-form");
+  
+  if (!loginForm) {
+    alert("জরুরি ত্রুটি: 'admin-login-form' আইডিটি HTML ফাইলে পাওয়া যায়নি!");
+    return;
+  }
 
-  const message = $("admin-message");
+  loginForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    
+    const emailField = $("admin-email");
+    const passwordField = $("admin-password");
+    const messageBox = $("admin-message");
 
-  try {
-    message.textContent = "Signing in...";
+    if (!emailField || !passwordField) {
+      alert("ইমেল বা পাসওয়ার্ড ইনপুট ফিল্ড খুঁজে পাওয়া যাচ্ছে না।");
+      return;
+    }
+
+    const email = emailField.value.trim();
+    const password = passwordField.value.trim();
+
+    if (!email || !password) {
+      if (messageBox) messageBox.textContent = "দয়া করে ইমেল এবং পাসওয়ার্ড দিন।";
+      return;
+    }
+
+    try {
+      if (!firebaseReady || !auth) {
+        throw new Error("Firebase কানেক্ট করা নেই বা Auth তৈরি হয়নি।");
+      }
+
+      if (messageBox) messageBox.textContent = "লগইন হচ্ছে, দয়া করে অপেক্ষা করুন...";
+      
+      await signInWithEmailAndPassword(auth, email, password);
+      
+    } catch (err) {
+      console.error("Login Error details:", err);
+      if (messageBox) {
+        messageBox.textContent = "লগইন ব্যর্থ হয়েছে: " + err.message;
+      } else {
+        alert("লগইন ব্যর্থ হয়েছে: " + err.message);
+      }
+    }
+  });
+
+  $("admin-logout")?.addEventListener("click", () => signOut(auth));
+
+  document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll("[data-tab]").forEach(x => x.classList.toggle("active", x === b));
+    document.querySelectorAll(".admin-pane").forEach(p => p.classList.toggle("hidden", p.id !== `pane-${b.dataset.tab}`));
+  }));
+
+  // বাকি প্রোডাক্ট ও ব্যানার ফর্মের কোড অপরিবর্তিত থাকবে...
+      }
+ 
 
     const email = $("admin-email").value.trim();
     const password = $("admin-password").value;
