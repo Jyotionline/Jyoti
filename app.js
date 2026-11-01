@@ -81,15 +81,44 @@ async function loadAdminReviews(){const root=$("admin-review-list");if(!root)ret
 async function loadSettings(){if(!$("setting-store-name"))return;const snap=await getDoc(doc(db,"settings","store"));if(snap.exists()){const s=snap.data();$("setting-store-name").value=s.storeName||"Jyoti Store";$("setting-email").value=s.email||"";$("setting-phone").value=s.phone||"";$("setting-about").value=s.about||"";$("setting-contact").value=s.contact||""}else $("setting-store-name").value="Jyoti Store"}
 
 function wireAdmin(){ 
-  $("admin-login-form")?.addEventListener("submit", async e => {
-    e.preventDefault();
-    try {
-      if (!firebaseReady || !auth) {
-        throw new Error("Firebase connection is not ready or auth is missing.");
-      }
-      const email = $("admin-email").value.trim();
-      const password = $("admin-password").value.trim();
-      
+  
+      $("admin-login-form")?.addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const message = $("admin-message");
+
+  try {
+    message.textContent = "Signing in...";
+
+    const email = $("admin-email").value.trim();
+    const password = $("admin-password").value;
+
+    const result = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    message.textContent =
+      "Firebase login successful. Checking admin permission...";
+
+    if (result.user.uid !== ADMIN_UID) {
+      await signOut(auth);
+      message.textContent =
+        "এই অ্যাকাউন্টের Admin permission নেই।";
+      return;
+    }
+
+    message.textContent = "Login successful. Opening dashboard...";
+
+    $("admin-login").classList.add("hidden");
+    $("admin-dashboard").classList.remove("hidden");
+
+  } catch (error) {
+    message.textContent = "Login failed: " + error.message;
+    console.error("Admin login error:", error);
+  }
+});
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
       console.error("Login Error:", err);
