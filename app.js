@@ -81,15 +81,24 @@ async function loadAdminReviews(){const root=$("admin-review-list");if(!root)ret
 async function loadSettings(){if(!$("setting-store-name"))return;const snap=await getDoc(doc(db,"settings","store"));if(snap.exists()){const s=snap.data();$("setting-store-name").value=s.storeName||"Jyoti Store";$("setting-email").value=s.email||"";$("setting-phone").value=s.phone||"";$("setting-about").value=s.about||"";$("setting-contact").value=s.contact||""}else $("setting-store-name").value="Jyoti Store"}
 
 function wireAdmin(){ 
-  $("admin-login-form")?.addEventListener("submit",async e=>{
+  $("admin-login-form")?.addEventListener("submit", async e => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, $("admin-email").value, $("admin-password").value);
-    } catch(err) {
-      $("admin-message").textContent = err.message;
+      if (!firebaseReady || !auth) {
+        throw new Error("Firebase connection is not ready or auth is missing.");
+      }
+      const email = $("admin-email").value.trim();
+      const password = $("admin-password").value.trim();
+      
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      console.error("Login Error:", err);
+      const msg = $("admin-message");
+      if (msg) msg.textContent = "লগইন ব্যর্থ হয়েছে: " + err.message;
+      else alert("লগইন ব্যর্থ হয়েছে: " + err.message);
     }
   });
-
+ 
   $("admin-logout")?.addEventListener("click", () => signOut(auth));
 
   document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{
