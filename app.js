@@ -68,6 +68,39 @@ async function initAdmin(){
       await loadAdminReviews();
       await loadSettings();
     } catch (e) {
+      console.error("Admin data load error:", e);
+      dash.innerHTML = `<div class="panel error" style="padding: 20px; color: #d93838;"><h2>ডেটা লোড করতে সমস্যা হচ্ছে</h2><p>${e.message}</p><p class="muted">দয়া করে ফায়ারস্টোর রুলস (Firestore Rules) চেক করুন।</p></div>`;
+    }
+  });
+}
+
+  onAuthStateChanged(auth, async user => {
+    currentUser = user;
+
+    if (!user) {
+      login.classList.remove("hidden");
+      dash.classList.add("hidden");
+      return;
+    }
+
+    if (user.uid !== ADMIN_UID) {
+      await signOut(auth);
+      login.classList.remove("hidden");
+      dash.classList.add("hidden");
+      $("admin-message").textContent = "এই অ্যাকাউন্টের Admin permission নেই।";
+      return;
+    }
+
+    login.classList.add("hidden");
+    dash.classList.remove("hidden");
+
+    try {
+      await loadAdminProducts();
+      await loadAdminBanners();
+      await loadAdminOrders();
+      await loadAdminReviews();
+      await loadSettings();
+    } catch (e) {
       $("admin-message").textContent = "Data loading error: " + e.message;
     }
   });
