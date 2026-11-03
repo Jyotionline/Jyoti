@@ -1,0 +1,12 @@
+{
+  "name": "jyoti-store-functions",
+  "description": "Secure backend for Jyoti Store 2.0",
+  "private": true,
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0",
+    "razorpay": "^2.9.5"
+  }
+}
